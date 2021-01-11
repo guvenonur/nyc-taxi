@@ -3,6 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 import plotly.express as px
+from util.config import config
 
 
 # Iris bar figure
@@ -15,8 +16,8 @@ def draw_figure():
                         df, x="sepal_width", y="sepal_length", color="species"
                     ).update_layout(
                         template='plotly_dark',
-                        plot_bgcolor= 'rgba(0, 0, 0, 0)',
-                        paper_bgcolor= 'rgba(0, 0, 0, 0)',
+                        plot_bgcolor='rgba(0, 0, 0, 0)',
+                        paper_bgcolor='rgba(0, 0, 0, 0)',
                     ),
                     config={
                         'displayModeBar': False
@@ -90,4 +91,4 @@ app.layout = html.Div([
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=config.app.debug)
