@@ -2,8 +2,81 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
+import json
 import plotly.express as px
+import plotly.graph_objects as go
 from util.config import config
+
+
+app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
+
+
+def draw_sunburst():
+    sun_data = dict(
+        character=["Eve", "Cain", "Seth", "Enos", "Noam", "Abel", "Awan", "Enoch", "Azura"],
+        parent=["", "Eve", "Eve", "Seth", "Seth", "Eve", "Eve", "Awan", "Eve"],
+        value=[10, 14, 12, 10, 2, 6, 6, 4, 4]
+    )
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody([
+                dcc.Graph(
+                    figure=px.sunburst(
+                            sun_data,
+                            names='character',
+                            parents='parent',
+                            values='value',
+                        ).update_layout(
+                            template='plotly_dark',
+                            plot_bgcolor='rgba(0, 0, 0, 0)',
+                            paper_bgcolor='rgba(0, 0, 0, 0)',
+                    ),
+                    config={
+                        'displayModeBar': False
+                    }
+                )
+            ])
+        ),
+    ])
+
+
+def draw_sankey():
+    with open('data/sk_data.json') as f:
+        sk_data = json.load(f)
+
+    # override gray link colors with 'source' colors
+    node = sk_data['data'][0]['node']
+    link = sk_data['data'][0]['link']
+
+    # Change opacity
+    node['color'] = [
+        'rgba(255,0,255,{})'.format(0.8)
+        if c == "magenta" else c.replace('0.8', '0.8')
+        for c in node['color']]
+
+    link['color'] = [
+        node['color'][src] for src in link['source']]
+
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody([
+                dcc.Graph(
+                    figure=go.Figure(
+                        go.Sankey(link=link, node=node)
+                    ).update_layout(
+                        template='plotly_dark',
+                        plot_bgcolor='rgba(0, 0, 0, 0)',
+                        paper_bgcolor='rgba(0, 0, 0, 0)',
+                    ),
+                    config={
+                        'displayModeBar': False
+                    }
+                ),
+                html.P("Opacity"),
+                dcc.Slider(id='opacity', min=0, max=1, value=0.5, step=0.1)
+            ])
+        ),
+    ])
 
 
 # Iris bar figure
@@ -113,8 +186,6 @@ def get_dropdown():
 df = px.data.iris()
 
 # Build App
-app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
-
 app.layout = html.Div([
     dbc.Card(
         dbc.CardBody([
@@ -132,13 +203,13 @@ app.layout = html.Div([
             html.Br(),
             dbc.Row([
                 dbc.Col([
-                    draw_figure()
+                    draw_sunburst()
                 ], width=3),
                 dbc.Col([
                     draw_figure()
                 ], width=3),
                 dbc.Col([
-                    draw_figure()
+                    draw_sankey()
                 ], width=6),
             ], align='center'),
             html.Br(),
