@@ -41,6 +41,74 @@ def draw_text():
     ])
 
 
+def get_loader():
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody([
+                html.Div(className="four columns pretty_container", children=[
+                    dcc.Loading(
+                        className="loader",
+                        id="loading",
+                        type="default",
+                        children=[
+                            html.Div(id='loader-trigger-1', style={"display": "none"}),
+                            html.Div(id='loader-trigger-2', style={"display": "none"}),
+                            html.Div(id='loader-trigger-3', style={"display": "none"}),
+                            html.Div(id='loader-trigger-4', style={"display": "none"}),
+                            dcc.Markdown(id='data_summary_filtered', children=f'Hello loading {len(df)}'),
+                            html.Progress(id="selected_progress", max=f"{len(df)}", value=f"{len(df) - 20}"),
+                        ]),
+                ])
+            ])
+        )
+    ])
+
+
+def get_slider():
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody([
+                html.Div(className="four columns pretty_container", children=[
+                    html.Label('Select pick-up hours'),
+                    dcc.RangeSlider(
+                        id='hours',
+                        value=[0, 23],
+                        min=0, max=23,
+                        marks={i: str(i) for i in range(0, 24, 3)}
+                    ),
+                ])
+            ])
+        )
+    ])
+
+
+def get_dropdown():
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody([
+                html.Div(className="four columns pretty_container", children=[
+                    html.Label('Select pick-up days'),
+                    dcc.Dropdown(
+                        id='days',
+                        placeholder='Select a day of week',
+                        options=[
+                            {'label': 'Monday', 'value': 0},
+                            {'label': 'Tuesday', 'value': 1},
+                            {'label': 'Wednesday', 'value': 2},
+                            {'label': 'Thursday', 'value': 3},
+                            {'label': 'Friday', 'value': 4},
+                            {'label': 'Saturday', 'value': 5},
+                            {'label': 'Sunday', 'value': 6}
+                        ],
+                        value=[],
+                        multi=True
+                    ),
+                ])
+            ])
+        )
+    ])
+
+
 # Data
 df = px.data.iris()
 
@@ -52,17 +120,14 @@ app.layout = html.Div([
         dbc.CardBody([
             dbc.Row([
                 dbc.Col([
-                    draw_text()
-                ], width=3),
+                    get_loader()
+                ], width=4),
                 dbc.Col([
-                    draw_text()
-                ], width=3),
+                    get_slider()
+                ], width=4),
                 dbc.Col([
-                    draw_text()
-                ], width=3),
-                dbc.Col([
-                    draw_text()
-                ], width=3),
+                    get_dropdown()
+                ], width=4),
             ], align='center'),
             html.Br(),
             dbc.Row([
