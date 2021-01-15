@@ -5,13 +5,7 @@ from sqlalchemy import create_engine
 Base = declarative_base()
 
 
-def postgres_session(params):
-    """
-    Returns SQLAlchemy session
-
-    :return: session
-    :rtype: Session
-    """
+def postgres_engine(params):
     host = params.host
     port = params.port
     username = params.username
@@ -19,8 +13,17 @@ def postgres_session(params):
     db = params.db
 
     uri = f'postgresql://{username}:{password}@{host}:{port}/{db}'
-    engine = create_engine(uri)
+    return create_engine(uri)
 
+
+def postgres_session(params):
+    """
+    Returns SQLAlchemy session
+
+    :return: session
+    :rtype: Session
+    """
+    engine = postgres_engine(params)
     Session = sessionmaker()
     Session.configure(bind=engine)
 

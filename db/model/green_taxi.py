@@ -1,5 +1,5 @@
 from db import Base
-from sqlalchemy import Column, FLOAT, Integer, String, TIMESTAMP
+from sqlalchemy import BIGINT, Column, FLOAT, Integer, String, TIMESTAMP
 from util.config import config
 
 
@@ -7,6 +7,7 @@ class GreenTaxi(Base):
     __tablename__ = 'green_taxi'
     __table_args__ = {'schema': config.postgres_db.schema}
 
+    uid = Column('uid', BIGINT, primary_key=True)
     VendorID = Column('VendorID', Integer)
     lpep_pickup_datetime = Column('lpep_pickup_datetime', TIMESTAMP)
     lpep_dropoff_datetime = Column('lpep_dropoff_datetime', TIMESTAMP)
