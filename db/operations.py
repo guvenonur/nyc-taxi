@@ -31,7 +31,7 @@ class Operations:
         :return: green taxi data
         :rtype: dict
         """
-        session = postgres_session(config.ds_ozoo)
+        session = postgres_session(config.postgres_db)
 
         try:
             results = session.query(GreenTaxi).all()

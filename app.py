@@ -2,30 +2,34 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
-import json
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from util.config import config
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
+df2 = pd.read_csv('data/green_tripdata_2019-03.csv')
+zones = pd.read_csv('data/zones.csv')
+
+zones.columns = ['PULocationID', 'PUBorough', 'PUZone', 'PUservice_zone']
+merged = df2.merge(zones, how='left', on='PULocationID')
+zones.columns = ['DOLocationID', 'DOBorough', 'DOZone', 'DOservice_zone']
+merged = merged.merge(zones, how='left', on='DOLocationID')
 
 
-def draw_sunburst():
-    sun_data = dict(
-        character=["Eve", "Cain", "Seth", "Enos", "Noam", "Abel", "Awan", "Enoch", "Azura"],
-        parent=["", "Eve", "Eve", "Seth", "Seth", "Eve", "Eve", "Awan", "Eve"],
-        value=[10, 14, 12, 10, 2, 6, 6, 4, 4]
-    )
+def draw_sunburst(path):
+    gp = merged.groupby(path) \
+        .agg(value=('VendorID', 'count')) \
+        .reset_index(drop=False)
     return html.Div([
         dbc.Card(
             dbc.CardBody([
                 dcc.Graph(
                     figure=px.sunburst(
-                            sun_data,
-                            names='character',
-                            parents='parent',
-                            values='value',
+                        gp,
+                        path=path,
+                        values='value'
                         ).update_layout(
                             template='plotly_dark',
                             plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -40,29 +44,49 @@ def draw_sunburst():
     ])
 
 
-def draw_sankey():
-    with open('data/sk_data.json') as f:
-        sk_data = json.load(f)
+def draw_sankey(boro):
+    boro_filtered = merged[(merged['PUBorough'] == boro) & (merged['DOBorough'] != boro)]
+    sk = boro_filtered \
+        .groupby(['PUBorough', 'DOBorough']) \
+        .agg(value=('VendorID', 'count')) \
+        .reset_index(drop=False)
+    zd = {
+        'EWR': 266,
+        'Queens': 267,
+        'Bronx': 268,
+        'Manhattan': 269,
+        'Staten Island': 270,
+        'Brooklyn': 271,
+        'Unknown': 272
+    }
+    sk['PUBorough'] = sk['PUBorough'].replace(zd)
+    sk['DOBorough'] = sk['DOBorough'].replace(zd)
 
-    # override gray link colors with 'source' colors
-    node = sk_data['data'][0]['node']
-    link = sk_data['data'][0]['link']
-
-    # Change opacity
-    node['color'] = [
-        'rgba(255,0,255,{})'.format(0.8)
-        if c == "magenta" else c.replace('0.8', '0.8')
-        for c in node['color']]
-
-    link['color'] = [
-        node['color'][src] for src in link['source']]
-
+    sk2 = boro_filtered \
+        .groupby(['DOBorough', 'DOZone']) \
+        .agg(value=('VendorID', 'count')) \
+        .reset_index(drop=False)
+    zd2 = zones.set_index('DOZone')['DOLocationID'].to_dict()
+    sk2['DOBorough'] = sk2['DOBorough'].replace(zd)
+    sk2['DOZone'] = sk2['DOZone'].replace(zd2)
     return html.Div([
         dbc.Card(
             dbc.CardBody([
                 dcc.Graph(
                     figure=go.Figure(
-                        go.Sankey(link=link, node=node)
+                        data=[go.Sankey(
+                            node=dict(
+                                pad=15,
+                                thickness=20,
+                                label=[''] + list(zones['DOZone']) + list(zd.keys()),
+                                color="blue"
+                            ),
+                            link=dict(
+                                source=list(sk.T.loc['PUBorough', :]) + list(sk2.T.loc['DOBorough', :]),
+                                target=list(sk.T.loc['DOBorough', :]) + list(sk2.T.loc['DOZone', :]),
+                                value=list(sk.T.loc['value', :]) + list(sk2.T.loc['value', :])
+                            )
+                        )]
                     ).update_layout(
                         template='plotly_dark',
                         plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -96,19 +120,6 @@ def draw_figure():
                         'displayModeBar': False
                     }
                 )
-            ])
-        ),
-    ])
-
-
-# Text field
-def draw_text():
-    return html.Div([
-        dbc.Card(
-            dbc.CardBody([
-                html.Div([
-                    html.H2("Place holder"),
-                ], style={'textAlign': 'center'})
             ])
         ),
     ])
@@ -203,23 +214,25 @@ app.layout = html.Div([
             html.Br(),
             dbc.Row([
                 dbc.Col([
-                    draw_sunburst()
+                    html.Label('Sun burst chart for Pick ups'),
+                    draw_sunburst(path=['PUBorough', 'PUZone'])
                 ], width=3),
                 dbc.Col([
-                    draw_figure()
+                    html.Label('Sun burst chart for Drop offs'),
+                    draw_sunburst(path=['DOBorough', 'DOZone'])
                 ], width=3),
                 dbc.Col([
-                    draw_sankey()
+                    draw_sankey(boro='Manhattan')
                 ], width=6),
             ], align='center'),
             html.Br(),
             dbc.Row([
                 dbc.Col([
                     draw_figure()
-                ], width=9),
+                ], width=4),
                 dbc.Col([
                     draw_figure()
-                ], width=3),
+                ], width=8),
             ], align='center'),
         ]), color='dark'
     )

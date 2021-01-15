@@ -3,3 +3,4 @@ __pycache__/
 *.swp
 config.ini
 .DS_Store
+/data/green_tripdata_*.csv
