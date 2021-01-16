@@ -193,6 +193,33 @@ def get_dropdown():
     ])
 
 
+def kpi_cards():
+    return dbc.Card([
+        dbc.CardBody(
+            [
+                html.H4("Card title", className="card-title"),
+                html.P(
+                    "$10.5 M",
+                    className="card-value",
+                ),
+                html.P(
+                    "Target: $10.0 M",
+                    className="card-target",
+                ),
+                html.Span(
+                    "Up ",
+                    className="card-diff-up",
+                ),
+                html.Span(
+                    "5.5% vs Last Year",
+                    className="card-diff-up",
+                ),
+
+            ]
+        ),
+    ])
+
+
 # Data
 df = px.data.iris()
 
@@ -234,6 +261,37 @@ app.layout = html.Div([
                     draw_figure()
                 ], width=8),
             ], align='center'),
+            html.Br(),
+            dbc.Row([
+                dbc.Col([
+                    draw_figure()
+                ], width=4),
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([
+                            kpi_cards()
+                        ]),
+                        dbc.Col([
+                            kpi_cards()
+                        ]),
+                        dbc.Col([
+                            kpi_cards()
+                        ]),
+                    ], align='center'),
+                    html.Br(),
+                    dbc.Row([
+                        dbc.Col([
+                            kpi_cards()
+                        ]),
+                        dbc.Col([
+                            kpi_cards()
+                        ]),
+                        dbc.Col([
+                            kpi_cards()
+                        ]),
+                    ], align='center')
+                ])
+            ], align='center')
         ]), color='dark'
     )
 ])
