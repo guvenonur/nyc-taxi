@@ -16,6 +16,11 @@ zones.columns = ['PULocationID', 'PUBorough', 'PUZone', 'PUservice_zone']
 merged = df2.merge(zones, how='left', on='PULocationID')
 zones.columns = ['DOLocationID', 'DOBorough', 'DOZone', 'DOservice_zone']
 merged = merged.merge(zones, how='left', on='DOLocationID')
+merged['lpep_pickup_datetime'] = pd.to_datetime(merged['lpep_pickup_datetime'], format='%Y-%m-%d %H:%M:%S')
+merged['lpep_dropoff_datetime'] = pd.to_datetime(merged['lpep_dropoff_datetime'], format='%Y-%m-%d %H:%M:%S')
+merged['weekday'] = merged['lpep_pickup_datetime'].apply(lambda x: x.weekday())
+merged['trip_time'] = (merged['lpep_dropoff_datetime'] - merged['lpep_pickup_datetime'])
+merged['trip_time'] = merged['trip_time'].apply(lambda x: round(x.seconds / 60))
 
 
 def draw_sunburst(path):
@@ -111,6 +116,36 @@ def draw_figure():
                 dcc.Graph(
                     figure=px.bar(
                         df, x="sepal_width", y="sepal_length", color="species"
+                    ).update_layout(
+                        template='plotly_dark',
+                        plot_bgcolor='rgba(0, 0, 0, 0)',
+                        paper_bgcolor='rgba(0, 0, 0, 0)',
+                    ),
+                    config={
+                        'displayModeBar': False
+                    }
+                )
+            ])
+        ),
+    ])
+
+
+def gdraw_line(x='weekday', y='value', color='PUBorough', group=None):
+    if group is None:
+        group = []
+
+    gr = merged.groupby(group)\
+        .agg(value=('VendorID', 'count'))\
+        .reset_index(drop=False)
+    return html.Div([
+        dbc.Card(
+            dbc.CardBody([
+                dcc.Graph(
+                    figure=px.line(
+                        gr,
+                        x=x,
+                        y=y,
+                        color=color
                     ).update_layout(
                         template='plotly_dark',
                         plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -258,7 +293,7 @@ app.layout = html.Div([
                     draw_figure()
                 ], width=4),
                 dbc.Col([
-                    draw_figure()
+                    gdraw_line(group=['PUBorough', 'weekday'])
                 ], width=8),
             ], align='center'),
             html.Br(),
