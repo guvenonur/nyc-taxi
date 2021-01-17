@@ -5,6 +5,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from dash.dependencies import Input, Output
 from util.config import config
 
 
@@ -19,6 +20,7 @@ merged = merged.merge(zones, how='left', on='DOLocationID')
 merged['lpep_pickup_datetime'] = pd.to_datetime(merged['lpep_pickup_datetime'], format='%Y-%m-%d %H:%M:%S')
 merged['lpep_dropoff_datetime'] = pd.to_datetime(merged['lpep_dropoff_datetime'], format='%Y-%m-%d %H:%M:%S')
 merged['weekday'] = merged['lpep_pickup_datetime'].apply(lambda x: x.weekday())
+merged['hour'] = merged['lpep_pickup_datetime'].apply(lambda x: x.hour)
 merged['trip_time'] = (merged['lpep_dropoff_datetime'] - merged['lpep_pickup_datetime'])
 merged['trip_time'] = merged['trip_time'].apply(lambda x: round(x.seconds / 60))
 
@@ -197,7 +199,8 @@ def get_slider():
                     dcc.RangeSlider(
                         id='hours',
                         value=[0, 23],
-                        min=0, max=23,
+                        min=0,
+                        max=23,
                         marks={i: str(i) for i in range(0, 24, 3)}
                     ),
                 ])
@@ -233,25 +236,26 @@ def get_dropdown():
     ])
 
 
-def kpi_card(col='trip_distance'):
-    total = merged[col].sum().round()
-    return dbc.Card([
+def kpi_card(min_val=0, max_val=23, col='trip_distance'):
+    merged2 = merged[merged['hour'].between(min_val, max_val)]
+    total = merged2[col].sum().round()
+    return dbc.Card(id='kpi-card', children=[
         dbc.CardBody(
             [
-                html.H4(f'Total {col}', className='card-title'),
+                html.H4('Total Trips', className='card-title'),
+                html.P(f'{min_val}, {max_val}', className='card-value2'),
                 html.P(total, className='card-value'),
-                html.Span(
-                    "Up ",
-                    className="card-diff-up",
-                ),
-                html.Span(
-                    "5.5% vs Last Year",
-                    className="card-diff-up",
-                ),
-
             ]
         ),
     ])
+
+
+@app.callback(
+    Output('kpi-card', 'children'),
+    Input('hours', 'value')
+)
+def update_kpi_card(value):
+    return kpi_card(min_val=min(value), max_val=max(value), col='trip_distance')
 
 
 # Build App
@@ -289,14 +293,7 @@ app.layout = html.Div([
                 dbc.CardBody([
                     dbc.Row([
                         dbc.Col([
-                            dbc.Card([
-                                dbc.CardBody(
-                                    [
-                                        html.H4('Total Trips', className='card-title'),
-                                        html.P(merged['VendorID'].count().round(), className='card-value'),
-                                    ]
-                                ),
-                            ])
+                            kpi_card()
                         ]),
                         dbc.Col([
                             dbc.Card([
@@ -342,7 +339,7 @@ app.layout = html.Div([
             html.Br(),
             dbc.Row([
                 dbc.Col([
-                    draw_figure()
+                    gdraw_line(group=['PUBorough', 'weekday'])
                 ], width=4),
                 dbc.Col([
                     html.Label('Trip counts by Drop off Borough, for weekdays'),
