@@ -27,6 +27,7 @@ def draw_sunburst(path):
     gp = merged.groupby(path) \
         .agg(value=('VendorID', 'count')) \
         .reset_index(drop=False)
+
     return html.Div([
         dbc.Card(
             dbc.CardBody([
@@ -74,6 +75,7 @@ def draw_sankey(boro):
     zd2 = zones.set_index('DOZone')['DOLocationID'].to_dict()
     sk2['DOBorough'] = sk2['DOBorough'].replace(zd)
     sk2['DOZone'] = sk2['DOZone'].replace(zd2)
+
     return html.Div([
         dbc.Card(
             dbc.CardBody([
@@ -84,7 +86,7 @@ def draw_sankey(boro):
                                 pad=15,
                                 thickness=20,
                                 label=[''] + list(zones['DOZone']) + list(zd.keys()),
-                                color="blue"
+                                color='rgba(255, 0, 255, 0.65)',
                             ),
                             link=dict(
                                 source=list(sk.T.loc['PUBorough', :]) + list(sk2.T.loc['DOBorough', :]),
@@ -100,12 +102,14 @@ def draw_sankey(boro):
                     config={
                         'displayModeBar': False
                     }
-                ),
-                html.P("Opacity"),
-                dcc.Slider(id='opacity', min=0, max=1, value=0.5, step=0.1)
+                )
             ])
         ),
     ])
+
+
+# Data
+df = px.data.iris()
 
 
 # Iris bar figure
@@ -130,9 +134,10 @@ def draw_figure():
     ])
 
 
-def gdraw_line(x='weekday', y='value', color='PUBorough', group=None):
+def gdraw_line(x='weekday', y='value', group=None):
     if group is None:
-        group = []
+        group = ['PUBorough', 'weekday']
+    color = group[0]
 
     gr = merged.groupby(group)\
         .agg(value=('VendorID', 'count'))\
@@ -228,19 +233,13 @@ def get_dropdown():
     ])
 
 
-def kpi_cards():
+def kpi_card(col='trip_distance'):
+    total = merged[col].sum().round()
     return dbc.Card([
         dbc.CardBody(
             [
-                html.H4("Card title", className="card-title"),
-                html.P(
-                    "$10.5 M",
-                    className="card-value",
-                ),
-                html.P(
-                    "Target: $10.0 M",
-                    className="card-target",
-                ),
+                html.H4(f'Total {col}', className='card-title'),
+                html.P(total, className='card-value'),
                 html.Span(
                     "Up ",
                     className="card-diff-up",
@@ -255,9 +254,6 @@ def kpi_cards():
     ])
 
 
-# Data
-df = px.data.iris()
-
 # Build App
 app.layout = html.Div([
     dbc.Card(
@@ -265,13 +261,13 @@ app.layout = html.Div([
             dbc.Row([
                 dbc.Col([
                     get_loader()
-                ], width=4),
+                ], width=2),
                 dbc.Col([
                     get_slider()
-                ], width=4),
+                ], width=5),
                 dbc.Col([
                     get_dropdown()
-                ], width=4),
+                ], width=5),
             ], align='center'),
             html.Br(),
             dbc.Row([
@@ -284,7 +280,63 @@ app.layout = html.Div([
                     draw_sunburst(path=['DOBorough', 'DOZone'])
                 ], width=3),
                 dbc.Col([
+                    html.Label('Sankey chart for Drop offs from Manhattan to other Boroughs'),
                     draw_sankey(boro='Manhattan')
+                ], width=6),
+            ], align='center'),
+            html.Br(),
+            dbc.Row([
+                dbc.CardBody([
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody(
+                                    [
+                                        html.H4('Total Trips', className='card-title'),
+                                        html.P(merged['VendorID'].count().round(), className='card-value'),
+                                    ]
+                                ),
+                            ])
+                        ]),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody(
+                                    [
+                                        html.H4('Total Trip Distance', className='card-title'),
+                                        html.P(merged['trip_distance'].sum().round(), className='card-value'),
+                                    ]
+                                ),
+                            ])
+                        ]),
+                    ], align='center'),
+                    html.Br(),
+                    dbc.Row([
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody(
+                                    [
+                                        html.H4('Total Trip Payment Amount', className='card-title'),
+                                        html.P(merged['total_amount'].sum().round(), className='card-value'),
+                                    ]
+                                ),
+                            ])
+                        ]),
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardBody(
+                                    [
+                                        html.H4('Total Passenger Amount', className='card-title'),
+                                        html.P(merged['passenger_count'].sum().round(), className='card-value'),
+                                    ]
+                                ),
+                            ])
+                        ]),
+                    ], align='center'),
+                ])
+                ,
+                dbc.Col([
+                    html.Label('Trip counts by Pick up Borough, for weekdays'),
+                    gdraw_line(group=['PUBorough', 'weekday'])
                 ], width=6),
             ], align='center'),
             html.Br(),
@@ -293,39 +345,9 @@ app.layout = html.Div([
                     draw_figure()
                 ], width=4),
                 dbc.Col([
-                    gdraw_line(group=['PUBorough', 'weekday'])
-                ], width=8),
-            ], align='center'),
-            html.Br(),
-            dbc.Row([
-                dbc.Col([
-                    draw_figure()
-                ], width=4),
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            kpi_cards()
-                        ]),
-                        dbc.Col([
-                            kpi_cards()
-                        ]),
-                        dbc.Col([
-                            kpi_cards()
-                        ]),
-                    ], align='center'),
-                    html.Br(),
-                    dbc.Row([
-                        dbc.Col([
-                            kpi_cards()
-                        ]),
-                        dbc.Col([
-                            kpi_cards()
-                        ]),
-                        dbc.Col([
-                            kpi_cards()
-                        ]),
-                    ], align='center')
-                ])
+                    html.Label('Trip counts by Drop off Borough, for weekdays'),
+                    gdraw_line(group=['DOBorough', 'weekday'])
+                ], width=8)
             ], align='center')
         ]), color='dark'
     )
