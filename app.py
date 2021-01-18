@@ -16,6 +16,12 @@ zones = pd.read_csv('data/zones.csv')
 
 
 def get_main_data():
+    """
+    Get data from db, merge with zones and add some features to be used in figures.
+
+    :return: Data to use in figures
+    :rtype: pd.DataFrame
+    """
     zones.columns = ['PULocationID', 'PUBorough', 'PUZone', 'PUservice_zone']
     merged = df2.merge(zones, how='left', on='PULocationID')
     zones.columns = ['DOLocationID', 'DOBorough', 'DOZone', 'DOservice_zone']
@@ -34,6 +40,16 @@ initial_length = len(data)
 
 
 def get_loader(min_hour=0, max_hour=23, days=None):
+    """
+    This function generates a loading bar that shows the current data you are working with and
+     its proportion to all data.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Loading bar for data used
+    :rtype: dcc.Loading
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -53,35 +69,41 @@ def get_loader(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_loader(hours, days):
+    """
+    This function updates loading bar with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed loading bar
+    :rtype: dcc.Loading
+    """
     return get_loader(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def get_slider():
-    return html.Div([
-        dbc.Card(
-            dbc.CardBody([
-                html.Div(className='four columns pretty_container', children=[
-                    html.Label('Select pick-up hours'),
-                    dcc.RangeSlider(
-                        id='hours',
-                        value=[0, 23],
-                        min=0,
-                        max=23,
-                        marks={i: str(i) for i in range(0, 24, 3)}
-                    ),
-                ])
-            ])
-        )
-    ])
+    """
+    Slider to filter hours in data.
+
+    :return: Slider filter
+    :rtype: dcc.RangeSlider
+    """
+    return dcc.RangeSlider(
+                id='hours',
+                value=[0, 23],
+                min=0,
+                max=23,
+                marks={i: str(i) for i in range(0, 24, 3)}
+            )
 
 
 def get_dropdown():
-    return html.Div([
-        dbc.Card(
-            dbc.CardBody([
-                html.Div(className='four columns pretty_container', children=[
-                    html.Label('Select pick-up days'),
-                    dcc.Dropdown(
+    """
+    Dropdown list to select days to filter data.
+
+    :return: Dropdown filter
+    :rtype: dcc.Dropdown
+    """
+    return dcc.Dropdown(
                         id='days',
                         placeholder='Select a day of week',
                         options=[
@@ -95,14 +117,19 @@ def get_dropdown():
                         ],
                         value=[],
                         multi=True
-                    ),
-                ])
-            ])
-        )
-    ])
+                    )
 
 
 def draw_sunburst_pu(min_hour=0, max_hour=23, days=None):
+    """
+    Sunburst chart for pick up boroughs.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Sunburst chart
+    :rtype: go.Figure
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -124,10 +151,27 @@ def draw_sunburst_pu(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_sunburst_pu(hours, days):
+    """
+    This function updates sunburst chart for pick up boroughs with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed sunburst chart
+    :rtype: go.Figure
+    """
     return draw_sunburst_pu(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def draw_sunburst_do(min_hour=0, max_hour=23, days=None):
+    """
+    Sunburst chart for drop off boroughs.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Sunburst chart
+    :rtype: go.Figure
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -149,10 +193,29 @@ def draw_sunburst_do(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_sunburst_do(hours, days):
+    """
+    This function updates sunburst chart for drop off boroughs with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed sunburst chart
+    :rtype: go.Figure
+    """
     return draw_sunburst_do(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def draw_sankey(boro='Manhattan', min_hour=0, max_hour=23, days=None):
+    """
+    Return a sankey diagram that takes given pick up borough as source and every other borough except itself as drop off
+     destination, and then takes each drop off borough as source to all zones of said boroughs.
+
+    :param boro: Pick up borough to select as source
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Sankey diagram
+    :rtype: go.Figure
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     boro_filtered = data[
@@ -212,10 +275,26 @@ def draw_sankey(boro='Manhattan', min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_sankey(hours, days):
+    """
+    This function updates sankey diagram with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed sankey diagram
+    :rtype: go.Figure
+    """
     return draw_sankey(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def gdraw_line1(min_hour=0, max_hour=23):
+    """
+    Return a line chart that shows total trip counts by pick up borough for weekdays.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :return: Line chart
+    :rtype: go.Figure
+    """
     df = data[(data['hour'].between(min_hour, max_hour))]
     gr = df.groupby(['PUBorough', 'weekday'])\
         .agg(trip_counts=('VendorID', 'count'))\
@@ -233,10 +312,25 @@ def gdraw_line1(min_hour=0, max_hour=23):
     Input('hours', 'value'),
 )
 def update_gdraw_line1(hours):
+    """
+    This function updates gdraw_line1's figure with callback input hours.
+
+    :param hours: Selected hours range
+    :return: Renewed line chart
+    :rtype: go.Figure
+    """
     return gdraw_line1(min_hour=min(hours), max_hour=max(hours))
 
 
 def gdraw_line2(min_hour=0, max_hour=23):
+    """
+    Return a line chart that shows total trip counts by drop off borough for weekdays.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :return: Line chart
+    :rtype: go.Figure
+    """
     df = data[(data['hour'].between(min_hour, max_hour))]
     gr = df.groupby(['DOBorough', 'weekday'])\
         .agg(trip_counts=('VendorID', 'count'))\
@@ -254,10 +348,25 @@ def gdraw_line2(min_hour=0, max_hour=23):
     Input('hours', 'value'),
 )
 def update_gdraw_line2(hours):
+    """
+    This function updates gdraw_line2's figure with callback input hours.
+
+    :param hours: Selected hours range
+    :return: Renewed line chart
+    :rtype: go.Figure
+    """
     return gdraw_line2(min_hour=min(hours), max_hour=max(hours))
 
 
 def draw_bar(min_hour=0, max_hour=23):
+    """
+    Return a bar chart that shows total amount paid for taxi rides by payment type for weekdays.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :return: Bar chart
+    :rtype: go.Figure
+    """
     df = data[(data['hour'].between(min_hour, max_hour))]
     pt = {
         1: 'Credit card',
@@ -284,10 +393,26 @@ def draw_bar(min_hour=0, max_hour=23):
     Input('hours', 'value'),
 )
 def update_draw_bar(hours):
+    """
+    This function updates bar chart figure with callback input hours.
+
+    :param hours: Selected hours range
+    :return: Renewed bar chart
+    :rtype: go.Figure
+    """
     return draw_bar(min_hour=min(hours), max_hour=max(hours))
 
 
 def kpi_card1(min_hour=0, max_hour=23, days=None):
+    """
+    Return a kpi card that shows total trip count.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Kpi card
+    :rtype: dbc.Card
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -308,10 +433,27 @@ def kpi_card1(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_kpi_card1(hours, days):
+    """
+    This function updates kpi_card1 with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed kpi_card1
+    :rtype: dbc.Card
+    """
     return kpi_card1(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def kpi_card2(min_hour=0, max_hour=23, days=None):
+    """
+    Return a kpi card that shows total trip distance.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Kpi card
+    :rtype: dbc.Card
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -332,10 +474,27 @@ def kpi_card2(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_kpi_card2(hours, days):
+    """
+    This function updates kpi_card2 with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed kpi_card2
+    :rtype: dbc.Card
+    """
     return kpi_card2(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def kpi_card3(min_hour=0, max_hour=23, days=None):
+    """
+    Return a kpi card that shows total amount spent for taxi rides.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Kpi card
+    :rtype: dbc.Card
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -356,10 +515,27 @@ def kpi_card3(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_kpi_card3(hours, days):
+    """
+    This function updates kpi_card3 with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed kpi_card3
+    :rtype: dbc.Card
+    """
     return kpi_card3(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def kpi_card4(min_hour=0, max_hour=23, days=None):
+    """
+    Return a kpi card that shows total passenger count.
+
+    :param min_hour: Min hour to filter data
+    :param max_hour: Max hour to filter data
+    :param days: Days to filter data
+    :return: Kpi card
+    :rtype: dbc.Card
+    """
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
@@ -380,6 +556,14 @@ def kpi_card4(min_hour=0, max_hour=23, days=None):
     Input('days', 'value'),
 )
 def update_kpi_card4(hours, days):
+    """
+    This function updates kpi_card4 with callback inputs hours and days.
+
+    :param hours: Selected hours range
+    :param days: Selected days
+    :return: Renewed kpi_card4
+    :rtype: dbc.Card
+    """
     return kpi_card4(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
@@ -392,7 +576,7 @@ app.layout = html.Div([
                     html.Div([
                         dbc.Card(
                             dbc.CardBody([
-                                html.Div(className='four columns pretty_container', children=[
+                                html.Div(children=[
                                     get_loader(),
                                 ])
                             ])
@@ -400,10 +584,28 @@ app.layout = html.Div([
                     ])
                 ], width=2),
                 dbc.Col([
-                    get_slider()
+                    html.Div([
+                        dbc.Card(
+                            dbc.CardBody([
+                                html.Div(children=[
+                                    html.Label('Select pick-up hours'),
+                                    get_slider(),
+                                    ])
+                                ])
+                            )
+                        ])
                 ], width=5),
                 dbc.Col([
-                    get_dropdown()
+                    html.Div([
+                        dbc.Card(
+                            dbc.CardBody([
+                                html.Div(children=[
+                                    html.Label('Select pick-up days'),
+                                    get_dropdown(),
+                                    ])
+                                ])
+                            )
+                        ])
                 ], width=5),
             ], align='center'),
             html.Br(),
