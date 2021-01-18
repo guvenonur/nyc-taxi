@@ -6,36 +6,16 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
+from datetime import datetime
+from db.operations import Operations
 from util.config import config
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
 
-df2 = pd.read_csv('data/green_tripdata_2019-03.csv')
 zones = pd.read_csv('data/zones.csv')
-
-
-def get_main_data():
-    """
-    Get data from db, merge with zones and add some features to be used in figures.
-
-    :return: Data to use in figures
-    :rtype: pd.DataFrame
-    """
-    zones.columns = ['PULocationID', 'PUBorough', 'PUZone', 'PUservice_zone']
-    merged = df2.merge(zones, how='left', on='PULocationID')
-    zones.columns = ['DOLocationID', 'DOBorough', 'DOZone', 'DOservice_zone']
-    merged = merged.merge(zones, how='left', on='DOLocationID')
-    merged['lpep_pickup_datetime'] = pd.to_datetime(merged['lpep_pickup_datetime'], format='%Y-%m-%d %H:%M:%S')
-    merged['lpep_dropoff_datetime'] = pd.to_datetime(merged['lpep_dropoff_datetime'], format='%Y-%m-%d %H:%M:%S')
-    merged['weekday'] = merged['lpep_pickup_datetime'].apply(lambda x: x.weekday())
-    merged['hour'] = merged['lpep_pickup_datetime'].apply(lambda x: x.hour)
-    merged['trip_time'] = (merged['lpep_dropoff_datetime'] - merged['lpep_pickup_datetime'])
-    merged['trip_time'] = merged['trip_time'].apply(lambda x: round(x.seconds / 60))
-    return merged
-
-
-data = get_main_data()
+op = Operations
+data = op.get_main_data(zones=zones)
 initial_length = len(data)
 
 
@@ -104,20 +84,20 @@ def get_dropdown():
     :rtype: dcc.Dropdown
     """
     return dcc.Dropdown(
-                        id='days',
-                        placeholder='Select a day of week',
-                        options=[
-                            {'label': 'Monday', 'value': 0},
-                            {'label': 'Tuesday', 'value': 1},
-                            {'label': 'Wednesday', 'value': 2},
-                            {'label': 'Thursday', 'value': 3},
-                            {'label': 'Friday', 'value': 4},
-                            {'label': 'Saturday', 'value': 5},
-                            {'label': 'Sunday', 'value': 6}
-                        ],
-                        value=[],
-                        multi=True
-                    )
+        id='days',
+        placeholder='Select a day of week',
+        options=[
+            {'label': 'Monday', 'value': 0},
+            {'label': 'Tuesday', 'value': 1},
+            {'label': 'Wednesday', 'value': 2},
+            {'label': 'Thursday', 'value': 3},
+            {'label': 'Friday', 'value': 4},
+            {'label': 'Saturday', 'value': 5},
+            {'label': 'Sunday', 'value': 6}
+        ],
+        value=[],
+        multi=True
+    )
 
 
 def draw_sunburst_pu(min_hour=0, max_hour=23, days=None):
@@ -253,8 +233,11 @@ def draw_sankey(boro='Manhattan', min_hour=0, max_hour=23, days=None):
                     node=dict(
                         pad=15,
                         thickness=20,
-                        label=[''] + list(zones['DOZone']) + list(zd.keys()),
-                        color='rgba(255, 0, 255, 0.65)',
+                        line = dict(
+                            width=0.5,
+                            color='rgba(255, 0, 255, 0.65)'
+                        ),
+                        label=[''] + list(zones['DOZone']) + list(zd.keys())
                     ),
                     link=dict(
                         source=list(sk.T.loc['PUBorough', :]) + list(sk2.T.loc['DOBorough', :]),
@@ -416,7 +399,7 @@ def kpi_card1(min_hour=0, max_hour=23, days=None):
     if days is None or len(days) == 0:
         days = [0, 1, 2, 3, 4, 5, 6]
     df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
-    total = df['VendorID'].count().round()
+    total = len(df)
     return dbc.Card(id='kpi-card1', children=[
         dbc.CardBody(
             [
@@ -737,3 +720,4 @@ app.layout = html.Div([
 
 if __name__ == '__main__':
     app.run_server(debug=config.app.debug)
+    print(datetime.now())

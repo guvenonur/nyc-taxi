@@ -28,3 +28,5 @@ class GreenTaxi(Base):
     payment_type = Column('payment_type', Integer)
     trip_type = Column('trip_type', Integer)
     congestion_surcharge = Column('congestion_surcharge', FLOAT)
+    month = Column('month', Integer, index=True)
+    year = Column('year', Integer, index=True)
