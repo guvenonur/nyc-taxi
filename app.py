@@ -116,7 +116,7 @@ def draw_sunburst_do(df=data):
     )
 
 
-def draw_sankey(boro='Manhattan', df=data):
+def draw_sankey(df=data, boro='Manhattan'):
     """
     Return a sankey diagram that takes given pick up borough as source and every other borough except itself as drop off
      destination, and then takes each drop off borough as source to all zones of said boroughs.
@@ -176,6 +176,26 @@ def draw_sankey(boro='Manhattan', df=data):
                 plot_bgcolor='rgba(0, 0, 0, 0)',
                 paper_bgcolor='rgba(0, 0, 0, 0)',
             )
+
+
+def sankey_dropdown(df=data):
+    """
+    Dropdown list to select days to filter data.
+
+    :param df: Initial data to get borough options for dropdown list
+    :return: Dropdown filter
+    :rtype: dcc.Dropdown
+    """
+    options = []
+    for b in df.PUBorough.unique():
+        options.append({'label': b, 'value': b})
+    return dcc.Dropdown(
+        id='borough',
+        placeholder='Select a pick up borough',
+        options=options,
+        value='Manhattan',
+        multi=False
+    )
 
 
 def gdraw_line1(df=data):
@@ -318,13 +338,15 @@ def kpi_card4(df=data):
     Output('kpi-card4', 'children'),
     Input('hours', 'value'),
     Input('days', 'value'),
+    Input('borough', 'value')
 )
-def update_all(hours, days):
+def update_all(hours, days, borough):
     """
     This function updates all components(charts, diagram and kpi cards) with callback inputs hours and days.
 
     :param hours: Selected hours range
     :param days: Selected days
+    :param borough: Selected pick up borough for sankey diagram
     :return: Renewed components
     :rtype: dbc.Card, dcc.Loading, go.Figure
     """
@@ -336,7 +358,7 @@ def update_all(hours, days):
     return get_loader(df=new_data),\
         draw_sunburst_pu(df=new_data),\
         draw_sunburst_do(df=new_data),\
-        draw_sankey(df=new_data), \
+        draw_sankey(df=new_data, boro=borough), \
         gdraw_line1(df=new_data_h),\
         gdraw_line2(df=new_data_h),\
         draw_bar(df=new_data_h),\
@@ -428,11 +450,15 @@ app.layout = html.Div([
                             dbc.CardBody([
                                 dcc.Graph(
                                     id='sankey-diagram',
-                                    figure=draw_sankey(boro='Manhattan'),
+                                    figure=draw_sankey(),
                                     config={
                                         'displayModeBar': False
                                         }
-                                    )
+                                    ),
+                                html.Div(children=[
+                                    html.Label('Select pick-up borough'),
+                                    sankey_dropdown(),
+                                    ])
                                 ])
                             ),
                         ])
