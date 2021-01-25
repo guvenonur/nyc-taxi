@@ -6,9 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
-from datetime import datetime
 from db.operations import Operations
-from util.config import config
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.SLATE])
@@ -19,20 +17,15 @@ data = op.get_main_data(zones=zones)
 initial_length = len(data)
 
 
-def get_loader(min_hour=0, max_hour=23, days=None):
+def get_loader(df=data):
     """
     This function generates a loading bar that shows the current data you are working with and
      its proportion to all data.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Initial data
     :return: Loading bar for data used
     :rtype: dcc.Loading
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     return dcc.Loading(
                 className='loader',
                 id='loading',
@@ -41,23 +34,6 @@ def get_loader(min_hour=0, max_hour=23, days=None):
                     dcc.Markdown(id='data_summary_filtered', children=f'{len(df):,d} taxi trips selected'),
                     html.Progress(id='selected_progress', max=f'{initial_length}', value=f'{len(df)}'),
                 ])
-
-
-@app.callback(
-    Output('loading', 'children'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_loader(hours, days):
-    """
-    This function updates loading bar with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed loading bar
-    :rtype: dcc.Loading
-    """
-    return get_loader(min_hour=min(hours), max_hour=max(hours), days=days)
 
 
 def get_slider():
@@ -100,19 +76,14 @@ def get_dropdown():
     )
 
 
-def draw_sunburst_pu(min_hour=0, max_hour=23, days=None):
+def draw_sunburst_pu(df=data):
     """
     Sunburst chart for pick up boroughs.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Initial data
     :return: Sunburst chart
     :rtype: go.Figure
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     gp = df.groupby(['PUBorough', 'PUZone']) \
         .agg(value=('VendorID', 'count')) \
         .reset_index(drop=False)
@@ -125,36 +96,14 @@ def draw_sunburst_pu(min_hour=0, max_hour=23, days=None):
     )
 
 
-@app.callback(
-    Output('sunburst-pu', 'figure'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_sunburst_pu(hours, days):
-    """
-    This function updates sunburst chart for pick up boroughs with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed sunburst chart
-    :rtype: go.Figure
-    """
-    return draw_sunburst_pu(min_hour=min(hours), max_hour=max(hours), days=days)
-
-
-def draw_sunburst_do(min_hour=0, max_hour=23, days=None):
+def draw_sunburst_do(df=data):
     """
     Sunburst chart for drop off boroughs.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Initial data
     :return: Sunburst chart
     :rtype: go.Figure
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     gp = df.groupby(['DOBorough', 'DOZone']) \
         .agg(value=('VendorID', 'count')) \
         .reset_index(drop=False)
@@ -167,43 +116,20 @@ def draw_sunburst_do(min_hour=0, max_hour=23, days=None):
     )
 
 
-@app.callback(
-    Output('sunburst-do', 'figure'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_sunburst_do(hours, days):
-    """
-    This function updates sunburst chart for drop off boroughs with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed sunburst chart
-    :rtype: go.Figure
-    """
-    return draw_sunburst_do(min_hour=min(hours), max_hour=max(hours), days=days)
-
-
-def draw_sankey(boro='Manhattan', min_hour=0, max_hour=23, days=None):
+def draw_sankey(boro='Manhattan', df=data):
     """
     Return a sankey diagram that takes given pick up borough as source and every other borough except itself as drop off
      destination, and then takes each drop off borough as source to all zones of said boroughs.
 
     :param boro: Pick up borough to select as source
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Initial data
     :return: Sankey diagram
     :rtype: go.Figure
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    boro_filtered = data[
-        (data['PUBorough'] == boro)
-        & (data['DOBorough'] != boro)
-        & (data['hour'].between(min_hour, max_hour))
-        & (data['weekday'].isin(days))
-        ]
+    boro_filtered = df[
+        (df['PUBorough'] == boro)
+        & (df['DOBorough'] != boro)
+    ]
     sk = boro_filtered \
         .groupby(['PUBorough', 'DOBorough']) \
         .agg(value=('VendorID', 'count')) \
@@ -252,37 +178,18 @@ def draw_sankey(boro='Manhattan', min_hour=0, max_hour=23, days=None):
             )
 
 
-@app.callback(
-    Output('sankey-diagram', 'figure'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_sankey(hours, days):
-    """
-    This function updates sankey diagram with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed sankey diagram
-    :rtype: go.Figure
-    """
-    return draw_sankey(min_hour=min(hours), max_hour=max(hours), days=days)
-
-
-def gdraw_line1(min_hour=0, max_hour=23):
+def gdraw_line1(df=data):
     """
     Return a line chart that shows total trip counts by pick up borough for weekdays.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
+    :param df: Initial data
     :return: Line chart
     :rtype: go.Figure
     """
-    df = data[(data['hour'].between(min_hour, max_hour))]
     gr = df.groupby(['PUBorough', 'weekday'])\
         .agg(trip_counts=('VendorID', 'count'))\
         .reset_index(drop=False)
-    return px.line(gr, x='weekday', y='trip_counts', color='PUBorough') \
+    return px.line(gr, x='weekday', y='trip_counts', color='PUBorough')\
         .update_layout(
             template='plotly_dark',
             plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -290,35 +197,18 @@ def gdraw_line1(min_hour=0, max_hour=23):
         )
 
 
-@app.callback(
-    Output('gdraw-line1', 'figure'),
-    Input('hours', 'value'),
-)
-def update_gdraw_line1(hours):
-    """
-    This function updates gdraw_line1's figure with callback input hours.
-
-    :param hours: Selected hours range
-    :return: Renewed line chart
-    :rtype: go.Figure
-    """
-    return gdraw_line1(min_hour=min(hours), max_hour=max(hours))
-
-
-def gdraw_line2(min_hour=0, max_hour=23):
+def gdraw_line2(df=data):
     """
     Return a line chart that shows total trip counts by drop off borough for weekdays.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
+    :param df: Initial data
     :return: Line chart
     :rtype: go.Figure
     """
-    df = data[(data['hour'].between(min_hour, max_hour))]
     gr = df.groupby(['DOBorough', 'weekday'])\
         .agg(trip_counts=('VendorID', 'count'))\
         .reset_index(drop=False)
-    return px.line(gr, x='weekday', y='trip_counts', color='DOBorough') \
+    return px.line(gr, x='weekday', y='trip_counts', color='DOBorough')\
         .update_layout(
             template='plotly_dark',
             plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -326,31 +216,14 @@ def gdraw_line2(min_hour=0, max_hour=23):
         )
 
 
-@app.callback(
-    Output('gdraw-line2', 'figure'),
-    Input('hours', 'value'),
-)
-def update_gdraw_line2(hours):
-    """
-    This function updates gdraw_line2's figure with callback input hours.
-
-    :param hours: Selected hours range
-    :return: Renewed line chart
-    :rtype: go.Figure
-    """
-    return gdraw_line2(min_hour=min(hours), max_hour=max(hours))
-
-
-def draw_bar(min_hour=0, max_hour=23):
+def draw_bar(df=data):
     """
     Return a bar chart that shows total amount paid for taxi rides by payment type for weekdays.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
+    :param df: Initial data
     :return: Bar chart
     :rtype: go.Figure
     """
-    df = data[(data['hour'].between(min_hour, max_hour))]
     pt = {
         1: 'Credit card',
         2: 'Cash',
@@ -371,183 +244,106 @@ def draw_bar(min_hour=0, max_hour=23):
     )
 
 
-@app.callback(
-    Output('draw-bar', 'figure'),
-    Input('hours', 'value'),
-)
-def update_draw_bar(hours):
-    """
-    This function updates bar chart figure with callback input hours.
-
-    :param hours: Selected hours range
-    :return: Renewed bar chart
-    :rtype: go.Figure
-    """
-    return draw_bar(min_hour=min(hours), max_hour=max(hours))
-
-
-def kpi_card1(min_hour=0, max_hour=23, days=None):
+def kpi_card1(df=data):
     """
     Return a kpi card that shows total trip count.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Data to calculate kpi
     :return: Kpi card
     :rtype: dbc.Card
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     total = len(df)
-    return dbc.Card(id='kpi-card1', children=[
-        dbc.CardBody(
-            [
-                html.H4('Total Trips', className='card-title'),
-                html.P(f'{int(total):,d}', className='card-value'),
-            ]
-        ),
-    ])
+    return [
+        html.H4('Total Trips', className='card-title'),
+        html.P(f'{int(total):,d}', className='card-value'),
+    ]
 
 
-@app.callback(
-    Output('kpi-card1', 'children'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_kpi_card1(hours, days):
-    """
-    This function updates kpi_card1 with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed kpi_card1
-    :rtype: dbc.Card
-    """
-    return kpi_card1(min_hour=min(hours), max_hour=max(hours), days=days)
-
-
-def kpi_card2(min_hour=0, max_hour=23, days=None):
+def kpi_card2(df=data):
     """
     Return a kpi card that shows total trip distance.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Data to calculate kpi
     :return: Kpi card
     :rtype: dbc.Card
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     total = df['trip_distance'].sum().round()
-    return dbc.Card(id='kpi-card2', children=[
-        dbc.CardBody(
-            [
-                html.H4('Total Trip Distance', className='card-title'),
-                html.P(f'{int(total):,d}', className='card-value'),
-            ]
-        ),
-    ])
+    return [
+        html.H4('Total Trip Distance', className='card-title'),
+        html.P(f'{int(total):,d}', className='card-value'),
+    ]
 
 
-@app.callback(
-    Output('kpi-card2', 'children'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_kpi_card2(hours, days):
-    """
-    This function updates kpi_card2 with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed kpi_card2
-    :rtype: dbc.Card
-    """
-    return kpi_card2(min_hour=min(hours), max_hour=max(hours), days=days)
-
-
-def kpi_card3(min_hour=0, max_hour=23, days=None):
+def kpi_card3(df=data):
     """
     Return a kpi card that shows total amount spent for taxi rides.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Data to calculate kpi
     :return: Kpi card
     :rtype: dbc.Card
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     total = df['total_amount'].sum().round()
-    return dbc.Card(id='kpi-card3', children=[
-        dbc.CardBody(
-            [
-                html.H4('Total Trip Payment Amount', className='card-title'),
-                html.P(f'{int(total):,d}', className='card-value'),
-            ]
-        ),
-    ])
+    return [
+        html.H4('Total Trip Payment Amount', className='card-title'),
+        html.P(f'{int(total):,d}', className='card-value'),
+    ]
 
 
-@app.callback(
-    Output('kpi-card3', 'children'),
-    Input('hours', 'value'),
-    Input('days', 'value'),
-)
-def update_kpi_card3(hours, days):
-    """
-    This function updates kpi_card3 with callback inputs hours and days.
-
-    :param hours: Selected hours range
-    :param days: Selected days
-    :return: Renewed kpi_card3
-    :rtype: dbc.Card
-    """
-    return kpi_card3(min_hour=min(hours), max_hour=max(hours), days=days)
-
-
-def kpi_card4(min_hour=0, max_hour=23, days=None):
+def kpi_card4(df=data):
     """
     Return a kpi card that shows total passenger count.
 
-    :param min_hour: Min hour to filter data
-    :param max_hour: Max hour to filter data
-    :param days: Days to filter data
+    :param df: Data to calculate kpi
     :return: Kpi card
     :rtype: dbc.Card
     """
-    if days is None or len(days) == 0:
-        days = [0, 1, 2, 3, 4, 5, 6]
-    df = data[(data['hour'].between(min_hour, max_hour)) & (data['weekday'].isin(days))]
     total = df['passenger_count'].sum().round()
-    return dbc.Card(id='kpi-card4', children=[
-        dbc.CardBody(
-            [
-                html.H4('Total Passenger Amount', className='card-title'),
-                html.P(f'{int(total):,d}', className='card-value'),
-            ]
-        ),
-    ])
+    return [
+        html.H4('Total Passenger Amount', className='card-title'),
+        html.P(f'{int(total):,d}', className='card-value'),
+    ]
 
 
 @app.callback(
+    Output('loading', 'children'),
+    Output('sunburst-pu', 'figure'),
+    Output('sunburst-do', 'figure'),
+    Output('sankey-diagram', 'figure'),
+    Output('gdraw-line1', 'figure'),
+    Output('gdraw-line2', 'figure'),
+    Output('draw-bar', 'figure'),
+    Output('kpi-card1', 'children'),
+    Output('kpi-card2', 'children'),
+    Output('kpi-card3', 'children'),
     Output('kpi-card4', 'children'),
     Input('hours', 'value'),
     Input('days', 'value'),
 )
-def update_kpi_card4(hours, days):
+def update_all(hours, days):
     """
-    This function updates kpi_card4 with callback inputs hours and days.
+    This function updates all components(charts, diagram and kpi cards) with callback inputs hours and days.
 
     :param hours: Selected hours range
     :param days: Selected days
-    :return: Renewed kpi_card4
-    :rtype: dbc.Card
+    :return: Renewed components
+    :rtype: dbc.Card, dcc.Loading, go.Figure
     """
-    return kpi_card4(min_hour=min(hours), max_hour=max(hours), days=days)
+    if days is None or len(days) == 0:
+        days = [0, 1, 2, 3, 4, 5, 6]
+    new_data_h = data[data['hour'].between(min(hours), max(hours))]
+    new_data = new_data_h[new_data_h['weekday'].isin(days)]
+
+    return get_loader(df=new_data),\
+        draw_sunburst_pu(df=new_data),\
+        draw_sunburst_do(df=new_data),\
+        draw_sankey(df=new_data), \
+        gdraw_line1(df=new_data_h),\
+        gdraw_line2(df=new_data_h),\
+        draw_bar(df=new_data_h),\
+        kpi_card1(df=new_data),\
+        kpi_card2(df=new_data),\
+        kpi_card3(df=new_data),\
+        kpi_card4(df=new_data)
 
 
 # Build App
@@ -648,19 +444,35 @@ app.layout = html.Div([
                     dbc.Row([
                         dbc.Col([
                             html.Label('Key performance indicators'),
-                            kpi_card1()
+                            dbc.Card(id='kpi-card1', children=[
+                                dbc.CardBody(
+                                    kpi_card1()
+                                    ),
+                                ])
                         ]),
                         dbc.Col([
-                            kpi_card2()
+                            dbc.Card(id='kpi-card2', children=[
+                                dbc.CardBody(
+                                    kpi_card2()
+                                    ),
+                                ])
                         ]),
                     ], align='center'),
                     html.Br(),
                     dbc.Row([
                         dbc.Col([
-                            kpi_card3()
+                            dbc.Card(id='kpi-card3', children=[
+                                dbc.CardBody(
+                                    kpi_card3()
+                                    ),
+                                ])
                         ]),
                         dbc.Col([
-                            kpi_card4()
+                            dbc.Card(id='kpi-card4', children=[
+                                dbc.CardBody(
+                                    kpi_card4()
+                                        ),
+                                    ])
                         ]),
                     ], align='center'),
                 ])
@@ -719,5 +531,4 @@ app.layout = html.Div([
 
 
 if __name__ == '__main__':
-    app.run_server(debug=config.app.debug)
-    print(datetime.now())
+    app.run_server(debug=False, use_reloader=False)
