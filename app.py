@@ -27,13 +27,14 @@ def get_loader(df=data):
     :rtype: dcc.Loading
     """
     return dcc.Loading(
-                className='loader',
-                id='loading',
-                type='default',
-                children=[
-                    dcc.Markdown(id='data_summary_filtered', children=f'{len(df):,d} taxi trips selected'),
-                    html.Progress(id='selected_progress', max=f'{initial_length}', value=f'{len(df)}'),
-                ])
+        className='loader',
+        id='loading',
+        type='default',
+        children=[
+            dcc.Markdown(id='data_summary_filtered', children=f'{len(df):,d} taxi trips selected'),
+            html.Progress(id='selected_progress', max=f'{initial_length}', value=f'{len(df)}'),
+        ]
+    )
 
 
 def get_slider():
@@ -44,12 +45,12 @@ def get_slider():
     :rtype: dcc.RangeSlider
     """
     return dcc.RangeSlider(
-                id='hours',
-                value=[0, 23],
-                min=0,
-                max=23,
-                marks={i: str(i) for i in range(0, 24, 3)}
-            )
+        id='hours',
+        value=[0, 23],
+        min=0,
+        max=23,
+        marks={i: str(i) for i in range(0, 24, 3)}
+    )
 
 
 def get_dropdown():
@@ -159,7 +160,7 @@ def draw_sankey(df=data, boro='Manhattan'):
                     node=dict(
                         pad=15,
                         thickness=20,
-                        line = dict(
+                        line=dict(
                             width=0.5,
                             color='rgba(255, 0, 255, 0.65)'
                         ),
@@ -389,8 +390,8 @@ app.layout = html.Div([
                         dbc.Card(
                             dbc.CardBody([
                                 html.Div(children=[
-                                    html.Label('Select pick-up hours'),
-                                    get_slider(),
+                                        html.Label('Select pick-up hours'),
+                                        get_slider(),
                                     ])
                                 ])
                             )

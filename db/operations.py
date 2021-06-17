@@ -31,6 +31,7 @@ class Operations:
     def get_data(page, size):
         """
         Get all data from db.
+
         :return: green taxi data
         :rtype: dict
         """
